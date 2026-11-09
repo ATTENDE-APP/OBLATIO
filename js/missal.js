@@ -225,9 +225,15 @@ function renderReading(o, it) {
     o.say('執事或主祭', '願主與你們同在。', SUP); o.say('信友', '也與你的心靈同在。', SUP);
     o.say('執事或主祭', book + '。', SUP); o.say('信友', '主，願祢受讚美。', SUP);
   } else o.h3(it.head.replace(/^(答唱詠)[　\s]*/, '$1　'));
+  // "——上主的話" is set at the end of the reading's last line; the dialogue and （默想片刻） are not shown
+  const lines = [];
   for (const l of it.lines) {
+    if (/^（默想片刻）$/.test(l)) continue;
+    if (/^——上主的話/.test(l)) { if (lines.length) lines[lines.length - 1] += '　——上主的話'; continue; }
+    lines.push(l);
+  }
+  for (const l of lines) {
     if (/^（.*）$/.test(l)) o.rub(l);
-    else if (/^——上主的話/.test(l)) { o.say(it.kind === '福音' ? '執事或主祭' : '讀經員', '上主的話。'); o.say('信友', it.kind === '福音' ? '基督，我們讚美祢。' : '感謝天主。', SUP); }
     else if (/^【答】/.test(l)) o.say('答', l.replace(/^【答】[：:]?\s*/, ''));
     else if (/^(領|眾)[：:]/.test(l)) o.raw(`<p class="m-p"><span class="spk">${l[0]}：</span>${inl(l.slice(2).replace(/【答】$/, '')).trim()}${/【答】$/.test(l) ? ' <span class="ri">【答】</span>' : ''}</p>`);
     else if (/^恭讀/.test(l)) { if (it.kind !== '福音') o.rub(l); }
@@ -294,7 +300,7 @@ export function renderMass(info, mass, st, dateStr) {
   o.sec('聖道禮儀');
   if (f.votive) {
     renderRawReadings(o, f.rb ? M.votive.rb[f.rb] : [], f);
-    o.h3('講道'); o.rub('（講道）', SUP); if (st.creed >= 0) { o.h3('信經'); o.blocks(O.creed[st.creed] || O.creed[0]); }
+    o.h3('講道'); if (st.creed >= 0) { o.h3('信經'); o.blocks(O.creed[st.creed] || O.creed[0]); }
     o.h3('信友禱文'); o.rub('（主祭邀請、意向及結束禱詞由團體按需要編寫）', SUP);
     return finishMass(o, f, st, info, O);
   }
@@ -310,7 +316,7 @@ export function renderMass(info, mass, st, dateStr) {
     if (sl.alts.length > 1) o.raw(`<div class="tabs">${sl.alts.map((a, j) => `<button class="pill" data-m="alt:${si}:${j}" aria-pressed="${j === ai}">${esc(sl.kind + (a.form ? '・' + a.form : '・' + '一二三四五六'[j]))}</button>`).join('')}</div>`);
     renderReading(o, sl.alts[ai]);
   });
-  o.h3('講道'); o.rub('（講道）', SUP);
+  o.h3('講道');
   if (st.creed >= 0) { o.h3('信經'); o.blocks(O.creed[st.creed] || O.creed[0]); }
   o.h3('信友禱文'); o.rub('（主祭邀請、意向及結束禱詞由團體按需要編寫）', SUP);
 

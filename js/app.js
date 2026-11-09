@@ -3,9 +3,10 @@ import { loadCalendar, dayInfo, setCalendar, calendarList, currentCalendar } fro
 import { fromIso, iso, WD } from './calendar.js';
 import { loadBlessings, renderIndex as blessIndex, renderChapter as blessChapter, renderRite as blessRite, chapterTarget as blessTarget, bindBlessings, setStore as blessStore } from './blessings.js';
 import { initTTS, stop as stopTTS } from './tts.js';
+import { loadRites, renderRites, bindRites, setStore as ritesStore } from './rites.js';
 import { loadMissal, missalLoaded, massesFor, defaults as massDefaults, renderMass as massHtml, optionsPanel } from './missal.js';
 
-const APP_VERSION = 'v17';   // keep in step with VERSION in sw.js
+const APP_VERSION = 'v19';   // keep in step with VERSION in sw.js
 const $ = (s) => document.querySelector(s);
 const store = { get(k, d) { try { const v = localStorage.getItem('oblatio.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem('oblatio.' + k, JSON.stringify(v)); } catch {} } };
@@ -13,7 +14,7 @@ const store = { get(k, d) { try { const v = localStorage.getItem('oblatio.' + k)
 const hkToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Hong_Kong' }).format(new Date());
 const BOOKS = [{ id: 'm', name: '彌撒' }, { id: 'r', name: '聖事禮典' }, { id: 'b', name: '祝福禮典' }];
 const S = { date: hkToday(), book: store.get('book', 'm'), choice: {} };
-blessStore(store);
+blessStore(store); ritesStore(store);
 
 function parseHash() {
   const m = location.hash.match(/^#\/(\d{4}-\d\d-\d\d)?\/?([mbr])?(?:\?c=([\w@-]*))?/);
@@ -80,7 +81,7 @@ function render() {
 
 async function renderBook(book, info) {
   const el = $('#office');
-  if (book !== 'b') document.body.classList.remove('presider');
+  if (book !== 'b' && book !== 'r') document.body.classList.remove('presider');
   if (book === 'b') {
     if (!S.bLoaded) { el.innerHTML = '<p class="loading">載入祝福禮典…</p>'; try { await loadBlessings(); S.bLoaded = true; } catch (e) { el.innerHTML = '<p class="empty">未能載入祝福禮典。</p>'; return; } if (S.book !== 'b') return; }
     // v8: index → chapter outline → one rite (bchap / brite in storage)
@@ -98,7 +99,9 @@ async function renderBook(book, info) {
     finish(el); return;
   }
   if (book === 'r') {
-    el.innerHTML = `<h1>聖事禮典</h1><div class="notes"><p>籌備中，來源仍在搜集。</p></div><p>將收錄：聖洗聖事（成人、兒童）、堅振聖事、婚姻聖事、修和聖事、病人傅油及臨終聖體、殯葬禮。在彌撒中舉行的禮儀，可直接加入「彌撒」的經文編排。</p>`;
+    if (!S.rLoaded) { el.innerHTML = '<p class="loading">載入聖事禮典…</p>'; try { await loadRites(); S.rLoaded = true; } catch (e) { el.innerHTML = '<p class="empty">未能載入聖事禮典。</p>'; return; } if (S.book !== 'r') return; }
+    el.innerHTML = renderRites();
+    bindRites(el, { rerender: () => render() });
     finish(el); return;
   }
   if (!missalLoaded()) { el.innerHTML = '<p class="loading">載入彌撒經文…</p>'; try { await loadMissal(); } catch (e) { el.innerHTML = '<p class="empty">未能載入彌撒經文。</p>'; return; } if (S.book !== 'm') return; }

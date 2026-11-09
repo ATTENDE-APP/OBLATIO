@@ -251,3 +251,14 @@ body.presider .b-rite .rub.act { font-size: .7em; }
 body.presider .b-alt { font-size: 12px; opacity: .8; }
 body.presider h1.mtitle { margin-top: .6em; }
 @media print { .b-sticky, .b-alt, .b-opts, .b-drawer, .b-last { display: none !important; } }
+/* ---------- 聖事禮典 ---------- */
+.r-sub { font-size: 13px; color: var(--muted); margin: -.3em 0 .8em; }
+.r-names { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 8px 0 2px; }
+.r-in { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 140px; }
+.r-in span { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.r-in input { flex: 1; min-width: 0; font: inherit; font-size: 15px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+.mass .r-ph { color: var(--red); font-size: .85em; }
+.mass .r-nm { font-weight: 700; }
+.mass .r-theme { font-weight: 400; color: var(--muted); font-size: .9em; }
+.r-soon { opacity: .55; } .r-soon small { color: var(--muted); font-size: 12px; }
+body.presider .r-opts, body.presider .r-sub, body.presider .b-src { display: none !important; }
