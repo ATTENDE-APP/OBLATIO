@@ -6,7 +6,7 @@ import { initTTS, stop as stopTTS } from './tts.js';
 import { loadRites, renderRites, bindRites, setStore as ritesStore } from './rites.js';
 import { loadMissal, missalLoaded, massesFor, defaults as massDefaults, renderMass as massHtml, optionsPanel } from './missal.js';
 
-const APP_VERSION = 'v19';   // keep in step with VERSION in sw.js
+const APP_VERSION = 'v21';   // keep in step with VERSION in sw.js
 const $ = (s) => document.querySelector(s);
 const store = { get(k, d) { try { const v = localStorage.getItem('oblatio.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem('oblatio.' + k, JSON.stringify(v)); } catch {} } };
@@ -202,7 +202,6 @@ async function main() {
   setCalendar(store.get('cal', 'hk'));
   renderCalendars();
   zh();
-  $('#coverage').textContent = `版本 ${APP_VERSION}`;
   render();
   initTTS(store);
   if (navigator.serviceWorker && navigator.serviceWorker.register && location.protocol !== 'file:') try {

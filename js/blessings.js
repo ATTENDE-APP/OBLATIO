@@ -93,7 +93,7 @@ export function chapterTarget(cid) { const r = findChapter(cid); if (!r) return 
 // ---------- 「或念」 alternatives ----------
 const spkOf = (b) => (b && b.k === 'opt' ? 'opt' : ((b && b.t) || '').match(/^([^：:]{1,4})[：:]/)?.[1] || '');
 function incipit(blocks) {
-  const o = blocks.find((b) => b.k === 'opt'); if (o) return o.t.replace(/（.*$/, '');
+  const o = blocks.find((b) => b.k === 'opt'); if (o) return o.t.replace(/（.*$/, '').replace(/^恭讀\S*　/, '');
   const b = blocks.find((x) => x.k === 'text') || blocks[0];
   const t = b.t.replace(SPK, '').replace(/[（(][^）)]*[）)]/g, '').replace(/^[：:\s]+/, '');
   return t.length > 9 ? t.slice(0, 8) + '…' : t;
