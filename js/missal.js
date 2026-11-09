@@ -283,6 +283,9 @@ function epBody(o, st, f, info) {
   }
 }
 
+/** 禱詞中的小字：「或」「或（國難時）」「（為教宗）」 */
+const isRub = (l) => l === '或' || /^或（.*）$/.test(l) || /^（[^）]{1,16}）$/.test(l);
+const firstSay = (L) => L.findIndex((l) => !isRub(l));
 export function renderMass(info, mass, st, dateStr) {
   const f = mass.f, T = info.L.temporal, O = M.ordo, o = new Out();
   if (f.special) return renderSpecial(f);
@@ -295,7 +298,7 @@ export function renderMass(info, mass, st, dateStr) {
   if (st.pen !== 2) { o.h3('上主，求祢垂憐'); o.blocks(O.kyrie.slice(1)); }
   if (st.gloria) { o.h3('光榮頌'); o.blocks(O.gloria.filter((b) => !/^按禮規/.test(b.x))); }
   o.h3('集禱經'); o.say('主祭', '請大家祈禱。（合掌）'); o.rub('全體默禱片刻。主祭伸手誦念集禱經：');
-  arr(f.collect).forEach((l, i) => (l === '或' ? o.rub('或') : o.say(i === 0 ? '主祭' : '', l)));
+  arr(f.collect).forEach((l, i) => (isRub(l) ? o.rub(l) : o.say(i === firstSay(arr(f.collect)) ? '主祭' : '', l)));
 
   o.sec('聖道禮儀');
   if (f.votive) {
@@ -326,14 +329,14 @@ export function renderMass(info, mass, st, dateStr) {
 function finishMass(o, f, st, info, O) {
   o.sec('聖祭禮儀');
   o.blocks(O.offertory);
-  o.h3('獻禮經'); arr(f.offerings).forEach((l, i) => (l === '或' ? o.rub('或') : o.say(i === 0 ? '主祭' : '', l)));
+  o.h3('獻禮經'); arr(f.offerings).forEach((l, i) => (isRub(l) ? o.rub(l) : o.say(i === firstSay(arr(f.offerings)) ? '主祭' : '', l)));
   o.sec(EPS[st.ep]);
   epBody(o, st, f, info);
   o.sec('領主禮');
   const com = O.communion_rite;
   o.blocks(com.slice(1));
   if (f.communion && f.communion.length) { o.h3('領主詠'); f.communion.forEach((l) => (/^（.*）$/.test(l) || l === '或' ? o.rub(l) : o.say('', l))); }
-  o.h3('領主後經'); o.say('主祭', '請大家祈禱。'); arr(f.postcommunion).forEach((l, i) => (l === '或' ? o.rub('或') : o.say(i === 0 ? '主祭' : '', l)));
+  o.h3('領主後經'); o.say('主祭', '請大家祈禱。'); arr(f.postcommunion).forEach((l, i) => (isRub(l) ? o.rub(l) : o.say(i === firstSay(arr(f.postcommunion)) ? '主祭' : '', l)));
 
   o.sec('禮成式');
   const con = O.concluding, iD = con.findIndex((b) => b.t === 'h' && b.x === '遣散');
@@ -347,8 +350,7 @@ function finishMass(o, f, st, info, O) {
 }
 
 function renderRawReadings(o, lines, f) {
-  o.raw(`<div class="notes"><p>以下讀經選項取自《感恩祭典》（台灣地區主教團，1982）；「見（某）頁」指該書頁數，經文請用讀經集。</p></div>`);
-  if (!lines.length) { o.rub('（本彌撒讀經：見讀經集或當日讀經）'); return; }
+  if (!lines.length) { o.rub('（本彌撒讀經：按禮規選用）'); return; }
   for (const l of lines) {
     if (l.startsWith('§')) o.h3(l.slice(1));
     else if (/^\d{1,2}\s*\S/.test(l) && l.length < 60 && /[（(]/.test(l)) o.raw(`<p class="m-p ropt">${esc(l)}</p>`);
