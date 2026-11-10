@@ -7,6 +7,24 @@ const speed = () => SPEEDS.find((r) => r[0] === store.get('ttsSpeed', 'mid')) ||
 let queue = [], pos = 0, playing = false, paused = false, store, $bar, gen = 0;   // gen: ignore events of cancelled utterances
 const live = new Set();   // utterances being spoken: kept referenced, or Safari may drop them (and their end event)
 let tmr = 0, cancelledAt = 0;
+// iOS 27: Web Speech follows the ring/silent switch (heard on Bluetooth, silent on the speaker).
+// While reading, a silent clip plays in 'playback' mode so the speaker is used even in silent mode.
+const IOS = typeof navigator !== 'undefined' && (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+const SILENCE = 'data:audio/wav;base64,UklGRvQHAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YdAHAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
+let keep = null;
+function audioOn() {   // call inside the tap
+  if (!IOS) return;
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older iOS */ }
+  try {
+    if (!keep) { keep = new Audio(SILENCE); keep.loop = true; keep.setAttribute('playsinline', ''); }
+    const pr = keep.play(); if (pr) pr.catch(() => {});
+  } catch (e) { /* no audio element */ }
+}
+function audioOff() {
+  if (!IOS) return;
+  try { if (keep) keep.pause(); } catch (e) {}
+  try { if (navigator.audioSession) navigator.audioSession.type = 'auto'; } catch (e) {}
+}
 // iOS 27 / Safari 27: speech queued in the same moment as cancel() is dropped (it 'plays' with no sound).
 // So: cancel only if something is speaking, then wait a moment before speaking; otherwise speak at once (inside the tap).
 function restart() {
@@ -74,12 +92,13 @@ function speakNext() {
 }
 
 export function stop() {
-  halt(); playing = false; paused = false; queue = []; pos = 0;
+  halt(); audioOff(); playing = false; paused = false; queue = []; pos = 0;
   document.querySelectorAll('#office .speaking').forEach((x) => x.classList.remove('speaking'));
   paint();
 }
 function play() {
   if (!synth) return;
+  audioOn();
   if (paused) { paused = false; restart(); paint(); return; }   // resume from the current paragraph
   const lang = store.get('ttsLang', 'yue');
   if (!voiceFor(lang) && synth.getVoices().length) msg(lang);
@@ -90,7 +109,7 @@ function play() {
   pos = Math.max(0, first); playing = true; paused = false;
   restart(); paint();
 }
-function pause() { paused = true; halt(); paint(); }
+function pause() { paused = true; halt(); audioOff(); paint(); }
 
 function msg(lang) {
   const el = $bar.querySelector('.tts-msg');
