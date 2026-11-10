@@ -53,13 +53,13 @@ export function findChapter(id) {
 }
 
 // ---------- rites: a chapter split at its section headings ----------
-// rank 0 = 壹、貳、…  rank 1 = 1、2、…（formerly 甲、乙、…） / ㈠  rank 2 = anything else (祝福儀式, 簡式, 第一式 …)
+// rank 0 = 1、2、…（formerly 壹、貳、…; stored as b.rank）  rank 1 = 1、2、…（formerly 甲、乙、…） / ㈠  rank 2 = anything else (祝福儀式, 簡式, 第一式 …)
 const rankOf = (t) => (/^[壹貳參叁肆伍陸柒捌玖拾]、/.test(t) ? 0 : /^(?:[甲乙丙芮丁戊己庚]|\d{1,2})、|^[㈠㈡㈢㈣]/.test(t) ? 1 : 2);
 function build(c) {
   if (c._r) return c._r;
   const units = []; let cur = { id: c.id + 'p', title: '', rank: 9, blocks: [], pre: true };
   for (const b of c.blocks) {
-    if (b.k === 'section') { units.push(cur); cur = { id: b.id, title: b.t, rank: rankOf(b.t), blocks: [] }; }
+    if (b.k === 'section') { units.push(cur); cur = { id: b.id, title: b.t, rank: b.rank ?? rankOf(b.t), blocks: [] }; }
     else cur.blocks.push(b);
   }
   units.push(cur);
