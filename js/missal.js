@@ -182,8 +182,8 @@ function inl(s) {
 }
 class Out {
   constructor() { this.h = []; }
-  sec(t) { this.h.push(`<h2 class="m-sec">${esc(t)}</h2>`); }
-  h3(t, tag) { this.h.push(`<h3 class="m-h">${esc(t)}${tag ? ` <span class="tag">${esc(tag)}</span>` : ''}</h3>`); }
+  sec(t, step = t) { this.h.push(`<h2 class="m-sec" data-step="${esc(step)}">${esc(t)}</h2>`); }
+  h3(t, tag, step) { this.h.push(`<h3 class="m-h"${step || STEP_H3.includes(t) ? ` data-step="${esc(step || t)}"` : ''}>${esc(t)}${tag ? ` <span class="tag">${esc(tag)}</span>` : ''}</h3>`); }
   rub(t, cls = '') { this.h.push(`<p class="rub ${cls}">${inl(t)}</p>`); }
   raw(h) { this.h.push(h); }
   cons(x) { this.h.push(`<p class="m-cons">${x.split('\n').map(inl).join('<br>')}</p>`); }   // Words of Consecration: bold, +2px
@@ -191,7 +191,7 @@ class Out {
     const parts = []; let last = 0, cur = sp;
     x.replace(SPK, (m, who, off) => { if (off > 0) parts.push([cur, x.slice(last, off)]); else if (!cur) cur = who; cur = who; last = off + m.length; return m; });
     parts.push([cur, x.slice(last)]);
-    for (const [w, t0] of parts) { const t = t0.trim(); if (t) this.h.push(`<p class="m-p ${cls}">${w ? `<span class="spk">${esc(w)}：</span>` : ''}${inl(t)}</p>`); }
+    for (const [w, t0] of parts) { const t = t0.trim(); if (t) this.h.push(`<p class="m-p ${cls}${PEOPLE.test(w) ? ' ppl' : ''}">${w ? `<span class="spk">${esc(w)}：</span>` : ''}${inl(t)}</p>`); }
   }
   blocks(bs) {
     for (const b of bs) {
@@ -204,6 +204,9 @@ class Out {
   html() { return this.h.join(''); }
 }
 const SUP = 'sup';   // texts supplied by the app (not in the sources): marked for checking
+// headings the step bar can jump to (besides the sections); the people's parts are marked so presider mode can tone them down
+const STEP_H3 = ['集禱經', '領主後經'];
+const PEOPLE = /^(信友|信眾|會眾|答)$/;
 
 function readingSlots(items, L) {
   const sun = L.cycles.sunday, wk = L.cycles.weekday;
@@ -221,7 +224,7 @@ function renderReading(o, it) {
   const ref = (it.lines.find((l) => /^恭讀/.test(l)) || '').split(/[　\s]+/).pop();
   if (it.kind === '福音') {
     const book = (it.lines.find((l) => /^恭讀/.test(l)) || '恭讀聖福音').replace(/[　\s]+[\d:,，\-–、 ]+.*$/, '').replace(/[　\s].*$/, '');
-    o.h3(it.head, ref);
+    o.h3(it.head, ref, '福音');
     o.say('執事或主祭', '願主與你們同在。', SUP); o.say('信友', '也與你的心靈同在。', SUP);
     o.say('執事或主祭', book + '。', SUP); o.say('信友', '主，願祢受讚美。', SUP);
   } else o.h3(it.head.replace(/^(答唱詠)[　\s]*/, '$1　'));
@@ -330,7 +333,7 @@ function finishMass(o, f, st, info, O) {
   o.sec('聖祭禮儀');
   o.blocks(O.offertory);
   o.h3('獻禮經'); arr(f.offerings).forEach((l, i) => (isRub(l) ? o.rub(l) : o.say(i === firstSay(arr(f.offerings)) ? '主祭' : '', l)));
-  o.sec(EPS[st.ep]);
+  o.sec(EPS[st.ep], '感恩經');
   epBody(o, st, f, info);
   o.sec('領主禮');
   const com = O.communion_rite;

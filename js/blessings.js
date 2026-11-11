@@ -245,6 +245,7 @@ export function renderRite(id) {
   return `<p class="b-crumb"><a href="#" data-b="index">‹ 祝福禮典</a>　<a href="#" data-chap="${c.id}">${n ? n + '　' : ''}${esc(crumbs.join(' › '))}</a></p>` +
     `<h1 class="mtitle">${esc(r.title)}</h1>` + panel +
     `<div class="b-sticky"><div class="b-where"><button class="b-toc" data-b="toc" aria-label="目錄">☰</button><span class="b-here">${esc(r.title)}</span>` +
+    `<span class="b-pz"><button data-b="pz" data-d="-1" aria-label="字體較小">A−</button><button data-b="pz" data-d="1" aria-label="字體較大">A＋</button></span>` +
     `<button class="b-pres" data-b="presider" aria-pressed="false">主禮模式</button></div>` +
     (steps.length > 1 ? `<nav class="b-steps" aria-label="禮儀步驟">${steps.map((s) => `<button data-step-go="${esc(s)}">${esc(s)}</button>`).join('')}</nav>` : '') + `</div>` +
     `<div class="mass b-rite" data-rid="${r.id}">${html.join('')}</div>` +
@@ -260,7 +261,8 @@ export function goStep(root, label) {
   if (!hs.length) return;
   const bar = root.querySelector('.b-sticky'); const top = topH() + (bar?.offsetHeight || 0) + 4;
   const next = hs.find((h) => h.getBoundingClientRect().top > top + 40) || hs[0];
-  window.scrollTo({ top: window.scrollY + next.getBoundingClientRect().top - top, behavior: 'smooth' });
+  const d = next.getBoundingClientRect().top - top;   // far away: jump at once (a long smooth scroll is slow at the altar)
+  window.scrollTo({ top: window.scrollY + d, behavior: Math.abs(d) > 1.5 * window.innerHeight ? 'instant' : 'smooth' });
 }
 let spy = null, lock = null;
 function scrollSpy(root) {
@@ -288,8 +290,14 @@ async function wake(on) {
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && document.body.classList.contains('presider')) wake(true); });
 function page(dir) { window.scrollBy({ top: dir * (window.innerHeight - topH() - 110), behavior: 'smooth' }); }
+let hinted = false;
 function presider(on) {
+  const was = document.body.classList.contains('presider');
   document.body.classList.toggle('presider', on);
+  if (on && !was && !hinted) {   // once per session: how to turn the page
+    hinted = true; const t = document.createElement('div'); t.className = 'p-hint'; t.textContent = '輕按畫面右邊翻下一頁，左邊翻上一頁';
+    document.body.appendChild(t); setTimeout(() => t.classList.add('out'), 2600); setTimeout(() => t.remove(), 3200);
+  }
   document.querySelectorAll('[data-b="presider"]').forEach((b) => { b.setAttribute('aria-pressed', on); b.textContent = on ? '✕ 結束主禮模式' : '主禮模式'; });
   wake(on);
 }
@@ -326,6 +334,11 @@ export function bindBlessings(el, ctx) {
     dr.onclick = (e) => { if (e.target === dr) dr.hidden = true; };
   }
   el.querySelectorAll('[data-b="presider"]').forEach((x) => x.onclick = () => presider(!document.body.classList.contains('presider')));
+  // type size in presider mode (shared by the three books)
+  el.querySelectorAll('[data-b="pz"]').forEach((x) => x.onclick = () => {
+    const v = Math.round(Math.max(1, Math.min(1.8, store.get('pz', 1.25) + 0.1 * Number(x.dataset.d))) * 100) / 100;
+    store.set('pz', v); document.documentElement.style.setProperty('--pz', v);
+  });
   const body = el.querySelector('.b-rite');
   if (body) body.onclick = (e) => {
     if (!document.body.classList.contains('presider') || e.target.closest('button, a, summary, input')) return;

@@ -5,7 +5,7 @@ import { loadBlessings, findRite as blessFindRite, findChapter as blessFindChapt
 import { loadRites, renderRites, bindRites, setStore as ritesStore } from './rites.js';
 import { loadMissal, missalLoaded, massesFor, defaults as massDefaults, renderMass as massHtml, optionsPanel } from './missal.js';
 
-const APP_VERSION = 'v38';   // keep in step with VERSION in sw.js
+const APP_VERSION = 'v40';   // keep in step with VERSION in sw.js
 const $ = (s) => document.querySelector(s);
 const store = { get(k, d) { try { const v = localStorage.getItem('oblatio.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem('oblatio.' + k, JSON.stringify(v)); } catch {} } };
@@ -79,7 +79,6 @@ function render() {
 
 async function renderBook(book, info) {
   const el = $('#office');
-  if (book !== 'b' && book !== 'r') document.body.classList.remove('presider');
   if (book === 'b') {
     if (!S.bLoaded) { el.innerHTML = '<p class="loading">載入祝福禮典…</p>'; try { await loadBlessings(); S.bLoaded = true; } catch (e) { el.innerHTML = '<p class="empty">未能載入祝福禮典。</p>'; return; } if (S.book !== 'b') return; }
     // v8: index → chapter outline → one rite (bchap / brite in storage)
@@ -113,7 +112,16 @@ async function renderBook(book, info) {
   const def = massDefaults(info, cur, S.date);
   const st = saved && saved.mass === cur.id ? { ...def, ...saved } : { ...def, mass: cur.id };
   const save = () => store.set('mass.' + S.date, st);
-  el.innerHTML = `${list.list.length > 1 || cur !== list.list[0] ? `<h1 class="mtitle">${esc(cur.label)}</h1>` : ''}${optionsPanel(info, list, cur, st, S.date)}<div class="mass">${massHtml(info, cur, st, S.date)}</div>`;
+  // v39: sticky bar with the steps of the Mass and 主禮模式 (altar view: larger type, no options, tap to turn the page, screen kept awake)
+  const body = massHtml(info, cur, st, S.date);
+  const steps = [...new Set([...body.matchAll(/data-step="([^"]+)"/g)].map((x) => x[1]))];
+  const name = info.choices.find((c) => c.id === (S.choice[S.date] || ''))?.title || cur.label;
+  el.innerHTML = `${list.list.length > 1 || cur !== list.list[0] ? `<h1 class="mtitle">${esc(cur.label)}</h1>` : ''}${optionsPanel(info, list, cur, st, S.date)}` +
+    `<div class="b-sticky m-sticky"><div class="b-where"><span class="b-here">${esc(cur !== list.list[0] ? cur.label : name)}</span>` +
+    `<span class="b-pz"><button data-b="pz" data-d="-1" aria-label="字體較小">A−</button><button data-b="pz" data-d="1" aria-label="字體較大">A＋</button></span>` +
+    `<button class="b-pres" data-b="presider" aria-pressed="false">主禮模式</button></div>` +
+    (steps.length > 1 ? `<nav class="b-steps" aria-label="彌撒步驟">${steps.map((x) => `<button data-step-go="${esc(x)}">${esc(x)}</button>`).join('')}</nav>` : '') + '</div>' +
+    `<div class="mass b-rite m-rite" data-rid="mass">${body}</div>`;
   el.querySelectorAll('select[data-ms]').forEach((x) => x.onchange = () => {
     const k = x.dataset.ms, v = x.value;
     if (k === 'mass') { store.set('mass.' + S.date, { mass: v }); render(); return; }
@@ -135,6 +143,7 @@ async function renderBook(book, info) {
     if (k === 'alt') { st.alt = { ...(st.alt || {}), [a]: +c }; }
     save(); const y = window.scrollY; render(); window.scrollTo(0, y);
   });
+  bindBlessings(el, { open: () => {}, rerender: () => render() });
   finish(el); zh($('#celebs'));
 }
 // 台灣用「週」
@@ -155,6 +164,7 @@ function shift(n) { const d = fromIso(S.date); S.date = iso(new Date(d.getTime()
 function applyPrefs() {
   const root = document.documentElement;
   root.style.setProperty('--fs', store.get('fs', 19) + 'px');
+  root.style.setProperty('--pz', store.get('pz', 1.25));
   const th = store.get('theme', null); if (th) root.dataset.theme = th; else delete root.dataset.theme;
   document.body.classList.toggle('norubrics', !store.get('rubrics', true));
   $('#rubrics').checked = store.get('rubrics', true);
@@ -187,7 +197,7 @@ async function main() {
   document.querySelectorAll('[data-font]').forEach((b) => b.onclick = () => { store.set('font', b.dataset.font); applyPrefs(); });
   $('#showWelcome').onchange = (e) => { store.set('skipWelcome', !e.target.checked); };
   $('#rubrics').onchange = (e) => { store.set('rubrics', e.target.checked); applyPrefs(); };
-  document.addEventListener('keydown', (e) => { if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return; if (S.book !== 'm') return; if (e.key === 'ArrowLeft') shift(-1); if (e.key === 'ArrowRight') shift(1); });
+  document.addEventListener('keydown', (e) => { if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return; if (S.book !== 'm' || document.body.classList.contains('presider')) return; if (e.key === 'ArrowLeft') shift(-1); if (e.key === 'ArrowRight') shift(1); });
   window.addEventListener('hashchange', () => { parseHash(); render(); });
   document.querySelectorAll('[data-script]').forEach((b) => b.onclick = async () => {
     const was = store.get('script', 't'); store.set('script', b.dataset.script); applyPrefs();

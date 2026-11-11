@@ -224,7 +224,7 @@ function renderSacrament() {
   if (r.mass && steps.includes('領主禮')) steps.splice(steps.indexOf('領主禮'), 0, '感恩經');
   return `<p class="b-crumb"><a href="#" data-b="index">‹ 聖事禮典</a>　${esc(D.title)}</p>` +
     `<h1 class="mtitle">${esc(r.title)}</h1>${r.sub ? `<p class="r-sub">${esc(r.sub)}</p>` : ''}` + panel(D, r, st) +
-    `<div class="b-sticky"><div class="b-where"><span class="b-here">${esc(r.title)}</span><button class="b-pres" data-b="presider" aria-pressed="false">主禮模式</button></div>` +
+    `<div class="b-sticky"><div class="b-where"><span class="b-here">${esc(r.title)}</span><span class="b-pz"><button data-b="pz" data-d="-1" aria-label="字體較小">A−</button><button data-b="pz" data-d="1" aria-label="字體較大">A＋</button></span><button class="b-pres" data-b="presider" aria-pressed="false">主禮模式</button></div>` +
     (steps.length > 1 ? `<nav class="b-steps" aria-label="禮儀步驟">${steps.map((s) => `<button data-step-go="${esc(s)}">${esc(s)}</button>`).join('')}</nav>` : '') + '</div>' +
     `<div class="mass b-rite" data-rid="r-${r.id}">${html}</div>` +
     `<div class="notes b-src"><p>${esc(r.src || '')}</p><p>${esc(D.src || '')}</p></div>`;

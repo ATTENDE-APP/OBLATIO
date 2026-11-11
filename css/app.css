@@ -231,7 +231,7 @@ body.presider { --toph: 0px; }
 body.presider .b-sticky { top: 0; padding-top: env(safe-area-inset-top); }
 body.presider .b-here { opacity: 1; }
 body.presider .office { padding-bottom: 40vh; }
-body.presider .b-rite { font-size: 1.22em; line-height: 1.7; }
+body.presider .b-rite { font-size: calc(var(--pz, 1.25) * 1em); line-height: 1.7; }
 body.presider .b-rite .m-p { margin: .45em 0; }
 body.presider .b-rite .rub.act { font-size: .7em; }
 body.presider .b-alt { font-size: 12px; opacity: .8; }
@@ -249,3 +249,32 @@ body.presider h1.mtitle { margin-top: .6em; }
 .r-soon { opacity: .55; } .r-soon small { color: var(--muted); font-size: 12px; }
 body.presider .r-opts, body.presider .r-sub, body.presider .b-src { display: none !important; }
 .ropt .nw { white-space: nowrap; }
+.licence { margin: 14px 0 10px; padding-top: 10px; border-top: 1px solid var(--line, rgba(127,127,127,.25)); }
+.licence .about { margin: 4px 0; }
+/* ---------- 彌撒 v39: step bar ＋ 主禮模式 for the altar (tablet and phone) ---------- */
+.b-pz { display: none; gap: 2px; }
+.b-pz button { min-width: 38px; height: 30px; border-radius: 8px; color: var(--accent); font-size: 14px; }
+.b-pz button:active { background: var(--chip); }
+body.presider .b-pz { display: inline-flex; }
+.m-sticky .b-here { font-weight: 700; }
+.m-rite h2.m-sec[data-step], .m-rite h3[data-step] { scroll-margin-top: calc(var(--toph, 86px) + 90px); }
+body.presider .mpanel, body.presider .m-rite .tabs, body.presider .m-rite .notes { display: none !important; }
+/* the Mass keeps its rubrics in presider mode (gestures, silence), only smaller */
+body.presider .b-rite.m-rite .rub { display: block !important; font-size: .7em; }
+body.presider .m-rite .m-p { margin: .5em 0; }
+body.presider .m-rite .ppl { color: var(--muted); }
+body.presider .m-rite .ppl .spk { color: var(--muted); }
+body.presider .m-rite h2.m-sec { margin-top: 2.2em; }
+body.presider .m-rite .m-cons { font-size: calc(1em + 3px); line-height: 1.75; }
+body.presider .office { max-width: 900px; padding-left: max(22px, env(safe-area-inset-left)); padding-right: max(22px, env(safe-area-inset-right)); }
+body.presider .b-sticky { max-width: none; }
+body.presider .b-steps button { font-size: 14px; padding: 6px 13px; }
+@media (min-width: 700px) {   /* tablet */
+  .b-steps button { font-size: 14px; padding: 5px 13px; }
+  .b-pres { font-size: 14px; padding: 5px 14px; }
+  body.presider .b-steps { justify-content: center; flex-wrap: wrap; }
+}
+.p-hint { position: fixed; left: 50%; bottom: calc(28px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 30; background: rgba(0,0,0,.78); color: #fff;
+  font-size: 15px; padding: 9px 18px; border-radius: 20px; white-space: nowrap; transition: opacity .5s; pointer-events: none; }
+.p-hint.out { opacity: 0; }
+@media print { .b-sticky { display: none !important; } }
