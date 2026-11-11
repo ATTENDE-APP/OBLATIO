@@ -27,6 +27,9 @@ function line(b, i) {
     // Bible reference like 格前12:12-14（title）: the title in smaller type
     const r = t.match(/^(.{0,3}[^\s（(：:]{1,5}\d+:[\dabc,\-– :]*[\dabc])(（[^（）]*）?)?(.*)$/s);
     if (r && r[2]) return `<p class="m-p ropt">${esc(r[1])}<span class="ref-t">${esc(r[2])}</span>${esc(r[3])}</p>`;
+    // reading heading 恭讀聖路加福音　路17:11-19: keep the reference on one line
+    const h = t.match(/^(恭讀\S+　)(\S+)$/);
+    if (h) return `<p class="m-p ropt">${esc(h[1])}<span class="nw">${esc(h[2])}</span></p>`;
     return `<p class="m-p ropt">${esc(t)}</p>`;
   }
   if (b.k === 'resp') return `<p class="m-p"><span class="spk">答：</span>${inl(t.replace(/^答[：:]\s*/, ''))}</p>`;

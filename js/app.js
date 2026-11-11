@@ -1,12 +1,11 @@
 // 獻禮 OBLATIO — 彌撒・聖事禮典・祝福禮典 (companion to 常頌 SEMPER, which keeps the Liturgy of the Hours)
 import { loadCalendar, dayInfo, setCalendar, calendarList, currentCalendar } from './liturgy.js';
 import { fromIso, iso, WD } from './calendar.js';
-import { loadBlessings, renderIndex as blessIndex, renderChapter as blessChapter, renderRite as blessRite, chapterTarget as blessTarget, bindBlessings, setStore as blessStore } from './blessings.js';
-import { initTTS, stop as stopTTS } from './tts.js';
+import { loadBlessings, findRite as blessFindRite, findChapter as blessFindChapter, renderIndex as blessIndex, renderChapter as blessChapter, renderRite as blessRite, chapterTarget as blessTarget, bindBlessings, setStore as blessStore } from './blessings.js';
 import { loadRites, renderRites, bindRites, setStore as ritesStore } from './rites.js';
 import { loadMissal, missalLoaded, massesFor, defaults as massDefaults, renderMass as massHtml, optionsPanel } from './missal.js';
 
-const APP_VERSION = 'v32';   // keep in step with VERSION in sw.js
+const APP_VERSION = 'v38';   // keep in step with VERSION in sw.js
 const $ = (s) => document.querySelector(s);
 const store = { get(k, d) { try { const v = localStorage.getItem('oblatio.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem('oblatio.' + k, JSON.stringify(v)); } catch {} } };
@@ -62,7 +61,6 @@ function renderCelebs(info) {
 }
 
 function render() {
-  stopTTS();   // new text on screen: stop reading
   const info = dayInfo(S.date);
   if (!info.choices.some((c) => c.id === (S.choice[S.date] || ''))) S.choice[S.date] = '';
   const [y, m, d] = S.date.split('-').map(Number);
@@ -86,6 +84,8 @@ async function renderBook(book, info) {
     if (!S.bLoaded) { el.innerHTML = '<p class="loading">載入祝福禮典…</p>'; try { await loadBlessings(); S.bLoaded = true; } catch (e) { el.innerHTML = '<p class="empty">未能載入祝福禮典。</p>'; return; } if (S.book !== 'b') return; }
     // v8: index → chapter outline → one rite (bchap / brite in storage)
     let rite = store.get('brite', ''), chap = store.get('bchap', '');
+    if (rite && !blessFindRite(rite)) { rite = ''; store.set('brite', ''); }   // saved rite no longer in the book (e.g. 短式 removed)
+    if (chap && !blessFindChapter(chap)) { chap = ''; store.set('bchap', ''); }
     if (chap && !rite && blessTarget(chap)?.rite) rite = blessTarget(chap).rite;
     el.innerHTML = rite ? blessRite(rite) : chap ? blessChapter(chap) : blessIndex(S.bq || '');
     const open = (v) => {
@@ -203,7 +203,6 @@ async function main() {
   renderCalendars();
   zh();
   render();
-  initTTS(store);
   if (navigator.serviceWorker && navigator.serviceWorker.register && location.protocol !== 'file:') try {
     navigator.serviceWorker.register('sw.js').then((reg) => {
       reg.addEventListener('updatefound', () => { const w = reg.installing; w && w.addEventListener('statechange', () => {
